@@ -4,8 +4,20 @@ const bodyParser = require('body-parser')
 
 const cors = require('cors')
 
+const dotenv = require('dotenv');
+dotenv.config();
+
 const mongoose = require('mongoose')
-mongoose.connect(process.env.MLAB_URI || 'mongodb://localhost/exercise-track' )
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true }); 
+
+const Schema = mongoose.Schema;
+
+const scheduleSchema = new Schema({
+    username:  { type: String, required: true }, 
+    num: Number
+});
+
+const Schedule = mongoose.model("Shedule", scheduleSchema);
 
 app.use(cors())
 
@@ -17,6 +29,24 @@ app.use(express.static('public'))
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 });
+
+
+app.post("/api/exercise/new-user",async (req,res)=>{
+  let username = req.body.username;
+  //changed up to here for the New user route.
+
+  const newDoc = new Schedule({
+    username:username
+  });
+
+  newDoc.save((err,data)=>{
+    if (err) return console.error(err);
+    console.log("INFO: Saved new DB doc: " + data);
+    res.json({username: username, _id: data._id});
+  });
+
+});
+
 
 
 // Not found middleware
