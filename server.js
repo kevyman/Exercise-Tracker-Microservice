@@ -14,10 +14,11 @@ const Schema = mongoose.Schema;
 
 const scheduleSchema = new Schema({
     username:  { type: String, required: true }, 
-    num: Number
+    count: Number,
+    log: Array
 });
 
-const Schedule = mongoose.model("Shedule", scheduleSchema);
+const Schedule = mongoose.model("Schedule", scheduleSchema);
 
 app.use(cors())
 
@@ -31,12 +32,13 @@ app.get('/', (req, res) => {
 });
 
 
-app.post("/api/exercise/new-user",async (req,res)=>{
-  let username = req.body.username;
-  //changed up to here for the New user route.
+app.post("/api/exercise/new-user", (req,res)=>{
+  const username = req.body.username;
 
   const newDoc = new Schedule({
-    username:username
+    username:username,
+    count:0,
+    log:[]
   });
 
   newDoc.save((err,data)=>{
@@ -47,6 +49,57 @@ app.post("/api/exercise/new-user",async (req,res)=>{
 
 });
 
+app.post("/api/exercise/add",async (req, res)=>{
+  const userId = req.body.userId;
+  const description = req.body.description;
+  const duration = req.body.duration;
+  let date = new Date();
+  if(req.body.date){
+    date = new Date(req.body.date);
+  }
+
+  
+  let query;
+  //This checks if the userId is a valid mongodb document ID or a username, and formats the search query.
+  if(mongoose.Types.ObjectId.isValid(userId)){
+    query = {_id:userId};
+  }else{
+    query = {username:userId};
+  }
+
+  let doc = await Schedule.findOne(query);
+
+  if (doc) {
+    doc.log.push({description:description,duration:duration,date:date});
+    await doc.save();
+    res.json({username:doc.username,_id:doc._id,description:description,duration:duration,date:date});
+  }else{
+    res.send("ERROR: Unknown _id or username");
+  }
+
+});
+
+// INFO: Saved new DB doc: {
+//   log: [],
+//   _id: 5e789009c6c0b70a7fd54344,
+//   username: 'John',
+//   count: 0,
+//   __v: 0
+// }
+// INFO: Saved new DB doc: {
+//   log: [],
+//   _id: 5e7a254732cace0c0569e3ff,
+//   username: 'willywild',
+//   count: 0,
+//   __v: 0
+// }
+
+//Add exercise returns:
+//{"username":"thingything","description":"kajkdfhakjd","duration":32,"_id":"ryZMKbLUI","date":"Mon Mar 23 2020"}
+
+//https://fuschia-custard.glitch.me/api/exercise/log?userId=ryZMKbLUI returns:
+//{"_id":"ryZMKbLUI","username":"thingything","count":1,"log":[{"description":"kajkdfhakjd","duration":32,"date":"Mon Mar 23 2020"}]}
+//if improper id, returns: unknown userId
 
 
 // Not found middleware
