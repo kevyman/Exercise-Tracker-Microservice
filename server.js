@@ -49,6 +49,21 @@ app.post("/api/exercise/new-user", (req,res)=>{
 
 });
 
+app.get("/api/exercise/users", (req,res)=>{
+  let userArray = [];
+  Schedule.find({},(err,data)=>{
+    if(err){
+      res.send("Something went horribly wrong: " + err);
+    }else{
+      data.forEach((doc)=>{
+        userArray.push({_id: doc._id, username: doc.username});
+      });
+      res.send(userArray);
+    }
+
+  });
+});
+
 app.post("/api/exercise/add",async (req, res)=>{
   const userId = req.body.userId;
   const description = req.body.description;
