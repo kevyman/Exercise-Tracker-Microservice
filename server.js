@@ -86,36 +86,87 @@ app.post("/api/exercise/add",async (req, res)=>{
 
   if (doc) {
     doc.log.push({description:description,duration:duration,date:date});
+    doc.count+=1;
     await doc.save();
-    res.json({username:doc.username,_id:doc._id,description:description,duration:duration,date:date});
+    res.json({username:doc.username,_id:doc._id,description:description,duration:duration,date:date.toDateString()});
   }else{
     res.send("ERROR: Unknown _id or username");
   }
 
 });
 
-// INFO: Saved new DB doc: {
-//   log: [],
-//   _id: 5e789009c6c0b70a7fd54344,
-//   username: 'John',
-//   count: 0,
-//   __v: 0
-// }
-// INFO: Saved new DB doc: {
-//   log: [],
-//   _id: 5e7a254732cace0c0569e3ff,
-//   username: 'willywild',
-//   count: 0,
-//   __v: 0
-// }
+app.get("/api/exercise/log", async (req,res)=>{
+  //http://127.0.0.1:3000/api/exercise/log?userId=John&from=2020-03-1&to=2020-12-1&limit=2
 
-//Add exercise returns:
-//{"username":"thingything","description":"kajkdfhakjd","duration":32,"_id":"ryZMKbLUI","date":"Mon Mar 23 2020"}
+  let userId, from, to, limit;
+  ({userId, from, to, limit} = req.query);
 
-//https://fuschia-custard.glitch.me/api/exercise/log?userId=ryZMKbLUI returns:
-//{"_id":"ryZMKbLUI","username":"thingything","count":1,"log":[{"description":"kajkdfhakjd","duration":32,"date":"Mon Mar 23 2020"}]}
-//if improper id, returns: unknown userId
+  console.log(`${userId} - ${from} - ${to} - ${limit}`);
+  let fromDate = new Date(0);
+  let toDate = new Date();
 
+  if(!limit || isNaN(limit)){
+    limit = 99;
+  }
+  if(from){
+    fromDate = new Date(from);
+  }
+  if(to){
+    toDate = new Date(to);
+  }
+
+  console.log(`${userId} - ${fromDate.toDateString()} - ${toDate.toDateString()} - ${limit}`);
+
+  if(userId && fromDate.isValid() && toDate.isValid() && fromDate < toDate){
+    console.log("Success!");
+
+    let query;
+    //This checks if the userId is a valid mongodb document ID or a username, and formats the search query.
+    if(mongoose.Types.ObjectId.isValid(userId)){
+      query = {_id:userId};
+    }else{
+      query = {username:userId};
+    }
+
+    console.log(query);
+    
+    const userDoc = await Schedule.findOne(query); 
+
+    
+
+    if(userDoc){
+      let filteredArray = [];
+      limitCounter = 0;
+
+      userDoc.log.forEach(exercise =>{
+        if(exercise.date>=fromDate && exercise.date<=toDate && limitCounter<limit){
+          filteredArray.push(exercise);
+          limitCounter++;
+        }
+      });
+      userDoc.log = filteredArray; 
+      res.send(userDoc);
+
+    }else{
+      res.send("Sorry, no logs found.");
+    }
+  }else{
+    res.send("ERROR: Invalid userId or dates.");
+  }
+ 
+  
+});
+
+
+
+
+Date.prototype.isValid = function () { 
+              
+  // If the date object is invalid it 
+  // will return 'NaN' on getTime()  
+  // and NaN is never equal to itself. 
+  return this.getTime() === this.getTime(); 
+}; 
 
 // Not found middleware
 app.use((req, res, next) => {
